@@ -1,5 +1,4 @@
-# 订阅管理模块
-class Subscriber:
+class SubscriptionManager:
     def __init__(self):
         self.subscriptions = []
 
@@ -9,4 +8,5 @@ class Subscriber:
     def remove_subscription(self, repo_url):
         self.subscriptions.remove(repo_url)
 
-    # 其他订阅管理功能...
+    def list_subscriptions(self):
+        return self.subscriptions

@@ -1,4 +1,7 @@
-# 通知系统模块
-def send_notification(message):
-    # 发送通知，例如邮件、Slack消息等
-    pass
+class Notifier:
+    def __init__(self):
+        pass
+
+    def send_notification(self, updates):
+        # Logic to send notifications
+        print("New updates:", updates)
