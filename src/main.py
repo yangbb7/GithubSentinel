@@ -1,20 +1,23 @@
+import cmd
+import readline
+import threading
+import time
 from update_fetcher import UpdateFetcher
 from report_generator import ReportGenerator
 from subscription_manager import SubscriptionManager
-import cmd
-import threading
-import time
+from llm_module import LLMModule
 
 
 class GitHubSentinel(cmd.Cmd):
     intro = "Welcome to GitHub Sentinel. Type help or ? to list commands.\n"
     prompt = "(Sentinel) "
+    file = None
 
     def __init__(self):
         super().__init__()
         self.subscription_manager = SubscriptionManager()
         self.update_fetcher = UpdateFetcher()
-        self.report_generator = ReportGenerator()
+        self.report_generator = ReportGenerator(LLMModule())
         self.scheduler_running = False
 
     def do_add(self, repo_url):
@@ -36,14 +39,9 @@ class GitHubSentinel(cmd.Cmd):
     def do_fetch(self, _):
         "Fetch updates for all subscriptions"
         for repo in self.subscription_manager.list_subscriptions():
-            release_info = self.update_fetcher.fetch_latest_release(repo)
-            if "error" in release_info:
-                print(release_info["error"])
-                self.subscription_manager.remove_subscription(repo)
-                print(f"Removed invalid subscription: {repo}")
-            else:
-                report = self.report_generator.generate_release_report(release_info)
-                print(report)
+            issues, prs = self.update_fetcher.fetch_issues_and_prs(repo)
+            self.update_fetcher.export_to_markdown(repo, issues, prs)
+            print(f"Exported daily progress for {repo}")
 
     def do_search(self, keyword):
         "Search for high-star projects by keyword: search <keyword>"
@@ -53,6 +51,11 @@ class GitHubSentinel(cmd.Cmd):
                 print(f"{project['full_name']}: {project['stargazers_count']} stars")
         else:
             print(projects['error'])
+
+    def do_generate_report(self, _):
+        "Generate summarized report from Markdown files"
+        self.report_generator.generate_daily_report()
+        print("Generated daily report")
 
     def do_start_scheduler(self, _):
         "Start the background scheduler"
