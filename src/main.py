@@ -45,6 +45,15 @@ class GitHubSentinel(cmd.Cmd):
                 report = self.report_generator.generate_release_report(release_info)
                 print(report)
 
+    def do_search(self, keyword):
+        "Search for high-star projects by keyword: search <keyword>"
+        projects = self.update_fetcher.fetch_top_projects_by_keyword(keyword)
+        if isinstance(projects, list):
+            for project in projects:
+                print(f"{project['full_name']}: {project['stargazers_count']} stars")
+        else:
+            print(projects['error'])
+
     def do_start_scheduler(self, _):
         "Start the background scheduler"
         if not self.scheduler_running:
