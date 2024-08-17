@@ -1,5 +1,4 @@
 import cmd
-import readline
 import threading
 import time
 from update_fetcher import UpdateFetcher

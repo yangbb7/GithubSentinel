@@ -1,5 +1,7 @@
 import glob
-from concurrent.futures import ThreadPoolExecutor
+import os
+import threading
+from pathlib import Path
 
 
 class ReportGenerator:
@@ -7,26 +9,39 @@ class ReportGenerator:
         self.llm_module = llm_module
 
     def generate_daily_report(self):
-        md_files = glob.glob("daily_reports/*.md")
-        with ThreadPoolExecutor() as executor:
-            executor.map(self.process_file, md_files)
+        input_dir = "daily_reports"
+        output_dir = "summarized_reports"
+        os.makedirs(output_dir, exist_ok=True)
 
-    def process_file(self, md_file):
-        with open(md_file, 'r') as file:
-            content = file.read()
-            summary = self.llm_module.summarize_report(content)
-            report_name = md_file.replace(".md", "_daily_report.md")
-            with open(report_name, 'w') as report_file:
-                report_file.write(f"# Daily Summary\n\n{summary}")
+        md_files = glob.glob(f"{input_dir}/*.md")
+        threads = [threading.Thread(target=self.process_file, args=(md_file, output_dir)) for md_file in md_files]
 
-    def generate_release_report(self, release_info):
-        if "error" in release_info:
-            return release_info["error"]
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+    def process_file(self, md_file: str, output_dir: str):
+        # 使用Pathlib确保路径的安全性
+        output_path = Path(output_dir)
+
         try:
-            report = f"Latest Release Report for {release_info['name']}\n"
-            report += f"Tag: {release_info['tag_name']}\n"
-            report += f"Published at: {release_info['published_at']}\n"
-            report += f"Body: {release_info['body']}\n"
-            return report
-        except KeyError:
-            return "Error: Incomplete release information."
+            # 使用'rt'模式确保跨平台兼容性
+            with open(md_file, 'rt', encoding='utf-8') as file:
+                content = file.read()
+                summary = self.llm_module.summarize_report(content)
+
+                # 使用Pathlib处理文件名，增加安全性
+                report_name = (output_path / Path(md_file).name.replace(".md", "_daily_report.md"))
+
+                # 使用'wt'模式确保跨平台兼容性
+                with open(report_name, 'wt', encoding='utf-8') as report_file:
+                    report_file.write(f"# Daily Summary\n\n{summary}")
+
+        except IOError as e:
+            print(f"An error occurred while processing the file: {e}")
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            raise
